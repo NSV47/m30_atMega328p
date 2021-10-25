@@ -77,9 +77,11 @@ const uint8_t port_las = 9;
 const uint8_t port_light = 10;
 const uint8_t port_EN_ROT_DEV = 11;
 const uint8_t port_limit_up = 12;
+const uint8_t port_limit_down = 3;
 
 bool old_state_limit_up = LOW;
-unsigned long timer_limit_up = 0;
+bool old_state_limit_down = LOW;
+//unsigned long timer_limit_up = 0; // удалить, если все работает, в других моделях тоже
 unsigned long timer_impulse = 0;
 
 bool state_power = false; //на 96 стр есть похожая переменная, может можно объединить???
@@ -89,9 +91,9 @@ bool state_port_stepOut = LOW;
 SoftwareSerial softSerial(pinRX,pinTX); 
 
 int T = 625; // чем меньше, тем выше частота вращения
-int mySpeed = 20; //скорость в мм/сек, 1 об/сек = 1600 имп/сек = 0.000625 сек
+int mySpeed = 50; //скорость в мм/сек, 1 об/сек = 1600 имп/сек = 0.000625 сек
 
-int acceleration = 600; // чем больше, с тем меньшей скорости начинаем движение
+int acceleration = 300; // чем больше, с тем меньшей скорости начинаем движение
 byte screwPitch = 5;
 float distance = 1;
 
@@ -109,14 +111,16 @@ void impulse(int& T, long& pulses){
   pulses*=2;
   while(pulses){
     bool state_port_limit_up = digitalRead(port_limit_up);
+    bool state_port_limit_down = digitalRead(port_limit_down);
     if(micros() - timer_impulse >= T){
       state_port_stepOut = !state_port_stepOut;
       digitalWrite(port_stepOut, state_port_stepOut);
       timer_impulse = micros();
       pulses--;
     }
-    if(state_port_limit_up){
-      pulses = 0;
+    if(state_port_limit_up || state_port_limit_down){
+      pulses = 0; // модернизировать таким образом, чтобы при сбрасывании задания (задаем количество импульсов на перемещение) это учитывалось в опредеении местоположения (для функции выезда в положение 
+                  //фокуса на рабочий стол)
     }
     
   }
@@ -124,6 +128,7 @@ void impulse(int& T, long& pulses){
 
 void rotation(long pulses, int T){
     bool state_port_limit_up = digitalRead(port_limit_up);
+    bool state_port_limit_down = digitalRead(port_limit_down);
     bool state_port_direction = digitalRead(port_direction);
     if(state_port_limit_up){
       if(!state_port_direction){
@@ -132,14 +137,36 @@ void rotation(long pulses, int T){
         }
       }else{
         impulse(T, pulses);
-        state_port_limit_up = digitalRead(port_limit_up);
+        state_port_limit_up = digitalRead(port_limit_up); //удалить если все работает
       }
-    }else{
+    }else 
+      if(state_port_limit_down){
+        if(state_port_direction){
+          if(millis()%500<=5){
+            delay(5); 
+            Serial.println("limit DOWN!");
+          }
+        }else{
+          impulse(T, pulses);
+        }
+      }
+    else{
       impulse(T, pulses);
-      state_port_limit_up = digitalRead(port_limit_up);
+      state_port_limit_up = digitalRead(port_limit_up); //удалить если все работает
     }
+    /*
+    if(state_port_limit_down){
+      if(state_port_direction){
+        if(millis()%500<=5){delay(5); 
+          Serial.println("limit DOWN!");
+        }
+      }else{
+        impulse(T, pulses);
+      }
+    }//else{
+      //impulse(T, pulses);
+    //}*/
 }
-
 void acceleration_function(int initialFreqiency, int finalFrequency){
   for(int i = initialFreqiency; i > finalFrequency; i--){ 
     rotation(8, i);
@@ -242,6 +269,7 @@ void controlUart(){                          // Эта функция позво
       //delay(500);          // удалить ели все работает
       */
       if(!state_pow_on){     // при первом включении отправить систему на верхний концевик
+        delay(1000);
         focusOnTheTable();
         state_pow_on = true;
       }
@@ -462,7 +490,8 @@ void setup() {
   pinMode(port_light, OUTPUT);
   pinMode(port_EN_ROT_DEV, OUTPUT);
   pinMode(port_limit_up, INPUT_PULLUP);
-
+  pinMode(port_limit_down, INPUT_PULLUP);
+  
   terminal();
   //-----------------------------------------------------------------------
   //settingTheDisplayButtonStates();
