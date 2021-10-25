@@ -215,17 +215,38 @@ void controlUart(){                          // Эта функция позво
       action(distance, mySpeed, acceleration);
     }else if(cmd.equals("focus")){
       Serial.println("focus!");
-      digitalWrite(port_direction, LOW);
-      action(500, mySpeed, acceleration);
-      digitalWrite(port_direction, HIGH);
-      action(100, mySpeed, acceleration);
+      focusOnTheTable();
+      //digitalWrite(port_direction, LOW);
+      //action(500, mySpeed, acceleration);
+      //digitalWrite(port_direction, HIGH);
+      //action(100, mySpeed, acceleration);
     }else if(cmd.equals("sensorInit")){
       Serial.println("debugging information");
     }else if(cmd.equals("sensorRead")){     
       Serial.print("debugging information");
     }else if(cmd.equals("autoFocus")){     
       Serial.println("this feature is in development");
-    }else{
+    }else if(cmd.equals("pow_ON")){
+      digitalWrite(port_power, HIGH);
+      state_power = true;
+      //------------------------------------------------------------------------------------------------------------------
+      // скорее всего этот блок кода для случая, когда кнопка питания лазера уже активирована, а основного питания еще нет. При этом выход контроллера включит
+      // питание лазера. Рассмотреть правильность, может быть не позволять активировать кнопку включения питания лазера без основного питания???
+      // Устанавливаем состояние кнопки включения питания лазера:                  
+      /*
+      softSerial.print((String) "print bt1.val"+char(255)+char(255)+char(255)); // Отправляем команду дисплею: «print bt1.val» заканчивая её тремя байтами 0xFF
+      while(!softSerial.available()){}                                          // Ждём ответа. Дисплей должен вернуть состояние кнопки bt1, отправив 4 байта данных, где 1 байт равен 0x01 или 0x00, а остальные 3 равны 0x00
+      digitalWrite(port_las, softSerial.read());       delay(10);               // Устанавливаем на выходе port_las состояние в соответствии с первым принятым байтом ответа дисплея
+      while(softSerial.available()){softSerial.read(); delay(10);}
+      //------------------------------------------------------------------------------------------------------------------
+      //delay(500);          // удалить ели все работает
+      */
+      if(!state_pow_on){     // при первом включении отправить систему на верхний концевик
+        focusOnTheTable();
+        state_pow_on = true;
+      }
+    }
+    else{
       Serial.println("error");    // ошибка
     }
   }
@@ -444,14 +465,14 @@ void setup() {
 
   terminal();
   //-----------------------------------------------------------------------
-  settingTheDisplayButtonStates();
+  //settingTheDisplayButtonStates();
   //-----------------------------------------------------------------------
   Serial.println("Ready!");
 }
 
 void loop() {
 
-  controlFromTheDisplay();
+  //controlFromTheDisplay();
   
   controlUart();
   
