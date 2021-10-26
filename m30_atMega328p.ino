@@ -274,6 +274,16 @@ void controlUart(){                          // Эта функция позво
         state_pow_on = true;
       }
     }
+    else 
+      if(cmd.equals("las_ON")){
+        if(state_power){
+          digitalWrite(port_las, HIGH);
+        }
+      }
+    else 
+      if(cmd.equals("las_OFF")){
+        digitalWrite(port_las, LOW);
+      }
     else{
       Serial.println("error");    // ошибка
     }
