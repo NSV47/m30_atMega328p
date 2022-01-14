@@ -504,14 +504,14 @@ void setup() {
   
   terminal();
   //-----------------------------------------------------------------------
-  //settingTheDisplayButtonStates();
+  settingTheDisplayButtonStates();
   //-----------------------------------------------------------------------
   Serial.println("Ready!");
 }
 
 void loop() {
 
-  //controlFromTheDisplay();
+  controlFromTheDisplay();
   
   controlUart();
   
